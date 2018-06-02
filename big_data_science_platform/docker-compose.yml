@@ -64,7 +64,7 @@ services:
       - zk3
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zk1:22181/kafka,zk2:32181/kafka,zk3:42181/kafka
+      KAFKA_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:19092
 
   kafka2:
@@ -78,7 +78,7 @@ services:
       - zk3
     environment:
       KAFKA_BROKER_ID: 2 
-      KAFKA_ZOOKEEPER_CONNECT: zk1:22181/kafka,zk2:32181/kafka,zk3:42181/kafka
+      KAFKA_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:29092
 
   kafka3:
@@ -92,5 +92,43 @@ services:
       - zk3
     environment:
       KAFKA_BROKER_ID: 3
-      KAFKA_ZOOKEEPER_CONNECT: zk1:22181/kafka,zk2:32181/kafka,zk3:42181/kafka
+      KAFKA_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:39092
+
+#######################
+# Analytics und Spark #
+#######################
+
+  jupyter_spark:
+    image: jupyter/all-spark-notebook
+    user: root
+    #remove hostename due to problems of local spark instance
+    #hostname: jupyter_spark
+    ports:
+      - "8888:8888"
+      - "4040-4080:4040-4080"
+    environment:
+      NB_USER : 'jovyan'
+      GRANT_SUDO : 'yes'
+    volumes:
+      - ./notebooks:/home/jovyan/notebooks/
+      
+#########
+# Druid #
+#########
+  druid:
+    image: druidio/example-cluster
+#    hostname: druid
+    ports:
+      - 3000:8082 
+      - 3001:8081
+      
+##############
+# H2O Server #
+##############
+  h2o:
+    image: h2oai
+    hostname: h2o
+    ports:
+       - "54321:54321"
+    entrypoint: java -Xmx1g -jar /opt/h2o.jar
