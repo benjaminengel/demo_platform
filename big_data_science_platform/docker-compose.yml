@@ -116,13 +116,22 @@ services:
 #########
 # Druid #
 #########
-  druid:
-    image: druidio/example-cluster
-#    hostname: druid
+#  druid:
+#    image: druidio/example-cluster
+##    hostname: druid
+#    ports:
+#      - 3000:8082 
+#      - 3001:8081
+            
+############
+# Mongo DB #
+############
+  mongo:
+    image: mongo
+    hostname: mongo
     ports:
-      - 3000:8082 
-      - 3001:8081
-      
+      - "27017:27017"
+
 ##############
 # H2O Server #
 ##############
@@ -132,3 +141,33 @@ services:
     ports:
        - "54321:54321"
     entrypoint: java -Xmx1g -jar /opt/h2o.jar
+
+#####################
+# Cassandra Cluster #
+#####################
+  cassandra-seed:
+    container_name: cassandra-seed-node
+    image: cassandra:3.11.0
+    ports:
+      - "9042:9042"   # Native transport
+      - "7199:7199"   # JMX
+      - "9160:9160"   # Thrift clients
+
+  cassandra-node-1:
+    image: cassandra:3.11.0
+    command: /bin/bash -c "echo 'Waiting for seed node' && sleep 30 && /docker-entrypoint.sh cassandra -f"
+    environment:
+      - "CASSANDRA_SEEDS=cassandra-seed-node"
+    depends_on:
+      - "cassandra-seed"
+      
+# OOM wit 16GB of RAM
+#  # you cannot have multiple nodes join the cluster at the same time when
+#  # cassandra.consistent.rangemovement is true so we further delay it to give it time to stabilize
+#  cassandra-node-2:
+#    image: cassandra:3.11.0
+#    command: /bin/bash -c "echo 'Waiting for seed node' && sleep 80 && /docker-entrypoint.sh cassandra -f"
+#    environment:
+#      - "CASSANDRA_SEEDS=cassandra-seed-node"
+#    depends_on:
+#      - "cassandra-seed"
