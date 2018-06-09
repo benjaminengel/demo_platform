@@ -186,7 +186,7 @@ services:
     environment:
       NB_USER : 'jovyan'
       GRANT_SUDO : 'yes'
-      PASSWORD : ''
+      PASSWORD : 'data'
     volumes:
       - ./notebooks:/home/jovyan/notebooks/
 
