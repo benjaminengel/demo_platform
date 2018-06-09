@@ -129,47 +129,71 @@ services:
       - kafka-schema-registry
 
 
-#---------------------------------------------------------------------------#
-# RADAR mongo connector                                                     #
-#---------------------------------------------------------------------------#
+###################
+# MongoDB Connect #
+###################
   kafka-mongodb-connector:
-    image: radarbase/kafka-connect-mongodb-sink:0.2.1
-    restart: on-failure
-    volumes:
-      - ./kafka-connect/sink-mongo.properties:/etc/kafka-connect/sink.properties
-    depends_on:
-      - zk1
-      - kafka1
-      - kafka2
-      - kafka3
-      - kafka-schema-registry
-      - kafka-rest-proxy
-      #- kafka-init
-      - mongo
+    image: radarcns/kafka-connect-mongodb-sink
     environment:
-      CONNECT_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,PLAINTEXT://kafka2:29092,PLAINTEXT://kafka3:39092
-      CONNECT_REST_PORT: 8082
-      CONNECT_GROUP_ID: "default"
-      CONNECT_CONFIG_STORAGE_TOPIC: "default.config"
-      CONNECT_OFFSET_STORAGE_TOPIC: "default.offsets"
-      CONNECT_STATUS_STORAGE_TOPIC: "default.status"
-      CONNECT_KEY_CONVERTER: "io.confluent.connect.avro.AvroConverter"
-      CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
-      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
-      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      CONNECT_OFFSET_STORAGE_FILE_FILENAME: "/tmp/connect2.offset"
-      CONNECT_REST_ADVERTISED_HOST_NAME: "radar-mongodb-connector"
-      CONNECT_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
-      CONNECT_CONSUMER_MAX_POLL_RECORDS: 500
-      CONNECT_CONSUMER_MAX_POLL_INTERVAL_MS: 300000
-      CONNECT_CONSUMER_SESSION_TIMEOUT_MS: 10000
-      CONNECT_CONSUMER_HEARTBEAT_INTERVAL_MS: 3000
-      CONNECT_PLUGIN_PATH: /usr/share/java/kafka-connect/plugins
-      KAFKA_BROKERS: 3
-      CONNECT_LOG4J_ROOT_LOGLEVEL: WARN
-      CONNECT_LOG4J_LOGGERS: "org.reflections=ERROR"
+        CONNECT_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,PLAINTEXT://kafka2:29092,PLAINTEXT://kafka3:39092
+        CONNECT_REST_PORT: 8083
+        CONNECT_GROUP_ID: "mongodb-sink"
+        CONNECT_CONFIG_STORAGE_TOPIC: "mongodb-sink.config"
+        CONNECT_OFFSET_STORAGE_TOPIC: "mongodb-sink.offsets"
+        CONNECT_STATUS_STORAGE_TOPIC: "mongodb-sink.status"
+        CONNECT_KEY_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+        CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+        CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
+        CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
+        CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+        CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+        CONNECT_OFFSET_STORAGE_FILE_FILENAME: "/tmp/mongdb-sink.offset"
+        CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-mongodb-connector"
+        CONNECT_ZOOKEEPER_CONNECT: zk1:22181
+        CONNECT_LOG4J_LOGGERS: "org.reflections=ERROR"
+        KAFKA_BROKERS: 3
+
+# #---------------------------------------------------------------------------#
+# # RADAR mongo connector                                                     #
+# #---------------------------------------------------------------------------#
+#   kafka-mongodb-connector:
+#     image: radarbase/kafka-connect-mongodb-sink:0.2.1
+#     restart: on-failure
+#     volumes:
+#       - ./kafka-connect/sink-mongo.properties:/etc/kafka-connect/sink.properties
+#     depends_on:
+#       - zk1
+#       - kafka1
+#       - kafka2
+#       - kafka3
+#       - kafka-schema-registry
+#       - kafka-rest-proxy
+#       #- kafka-init
+#       - mongo
+#     environment:
+#       CONNECT_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,PLAINTEXT://kafka2:29092,PLAINTEXT://kafka3:39092
+#       CONNECT_REST_PORT: 8082
+#       CONNECT_GROUP_ID: "default"
+#       CONNECT_CONFIG_STORAGE_TOPIC: "default.config"
+#       CONNECT_OFFSET_STORAGE_TOPIC: "default.offsets"
+#       CONNECT_STATUS_STORAGE_TOPIC: "default.status"
+#       CONNECT_KEY_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+#       CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+#       CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
+#       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
+#       CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+#       CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+#       CONNECT_OFFSET_STORAGE_FILE_FILENAME: "/tmp/connect2.offset"
+#       CONNECT_REST_ADVERTISED_HOST_NAME: "radar-mongodb-connector"
+#       CONNECT_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
+#       CONNECT_CONSUMER_MAX_POLL_RECORDS: 500
+#       CONNECT_CONSUMER_MAX_POLL_INTERVAL_MS: 300000
+#       CONNECT_CONSUMER_SESSION_TIMEOUT_MS: 10000
+#       CONNECT_CONSUMER_HEARTBEAT_INTERVAL_MS: 3000
+#       CONNECT_PLUGIN_PATH: /usr/share/java/kafka-connect/plugins
+#       KAFKA_BROKERS: 3
+#       CONNECT_LOG4J_ROOT_LOGLEVEL: WARN
+#       CONNECT_LOG4J_LOGGERS: "org.reflections=ERROR"
 
 
 #######################
