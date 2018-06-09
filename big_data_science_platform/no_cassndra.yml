@@ -134,6 +134,8 @@ services:
 ###################
   kafka-mongodb-connector:
     image: radarcns/kafka-connect-mongodb-sink
+    volumes:
+      - ./sink-mongo.properties.template:/etc/kafka-connect/sink.properties
     environment:
         CONNECT_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,PLAINTEXT://kafka2:29092,PLAINTEXT://kafka3:39092
         CONNECT_REST_PORT: 8083
