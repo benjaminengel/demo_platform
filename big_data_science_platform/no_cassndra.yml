@@ -160,7 +160,7 @@ services:
       - kafka2
       - kafka3
       - kafka-schema-registry
-      - kfaka-rest-proxy
+      - kafka-rest-proxy
 
 # #---------------------------------------------------------------------------#
 # # RADAR mongo connector                                                     #
