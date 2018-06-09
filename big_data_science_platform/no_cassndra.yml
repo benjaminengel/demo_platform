@@ -154,6 +154,13 @@ services:
         CONNECT_ZOOKEEPER_CONNECT: zk1:22181
         CONNECT_LOG4J_LOGGERS: "org.reflections=ERROR"
         KAFKA_BROKERS: 3
+    depends_on:
+      - zk1
+      - kafka1
+      - kafka2
+      - kafka3
+      - kafka-schema-registry
+      - kfaka-rest-proxy
 
 # #---------------------------------------------------------------------------#
 # # RADAR mongo connector                                                     #
