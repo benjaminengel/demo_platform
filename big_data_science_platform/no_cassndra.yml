@@ -1,0 +1,250 @@
+version: '2'
+
+services:
+################################
+# setting up the zookeper trio #
+#### ###########################
+  zk1:
+    image: confluentinc/cp-zookeeper:latest
+    hostname: zk1
+    ports:
+      - "22181:22181"
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 22181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zk1:22888:23888;zk2:32888:33888;zk3:42888:43888
+
+
+  zk2:
+    image: confluentinc/cp-zookeeper:latest
+    hostname: zk2
+    ports:
+      - "32181:32181"
+    environment:
+      ZOOKEEPER_SERVER_ID: 2
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zk1:22888:23888;zk2:32888:33888;2k3:42888:43888
+
+
+
+  zk3:
+    image: confluentinc/cp-zookeeper:latest
+    hostname: zk3
+    ports:
+      - "42181:42181"
+    environment:
+      ZOOKEEPER_SERVER_ID: 3
+      ZOOKEEPER_CLIENT_PORT: 42181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: zk1:22888:23888;zk2:32888:33888;2k3:42888:43888
+
+
+################################
+# setting up the kafka cluster #
+################################
+  kafka1:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka1
+    ports:
+      - "19092:19092"
+    depends_on:
+      - zk1
+      - zk2
+      - zk3
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:19092
+
+  kafka2:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka2
+    ports:
+      - "29092:29092"
+    depends_on:
+      - zk1
+      - zk2
+      - zk3
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:29092
+
+  kafka3:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka3
+    ports:
+      - "39092:39092"
+    depends_on:
+      - zk1
+      - zk2
+      - zk3
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:39092
+
+#########################
+# kafka schema registry #
+#########################
+  kafka-schema-registry:
+    image: confluentinc/cp-schema-registry:4.1.0
+    hostname: kafka-schema-registry
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zk1:22181
+      SCHEMA_REGISTRY_HOST_NAME: kafka-schema-registry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    depends_on:
+      - zk1
+      - kafka1
+
+####################
+# kafka rest proxy #
+####################
+  kafka-rest-proxy:
+    image: confluentinc/cp-kafka-rest:4.1.0
+    hostname: kafka-rest-proxy
+    ports:
+      - "8082:8082"
+    environment:
+      KAFKA_REST_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
+      KAFKA_REST_LISTENERS: http://0.0.0.0:8082/
+      KAFKA_REST_SCHEMA_REGISTRY_URL: http://kafka-schema-registry:8081/
+      KAFKA_REST_HOST_NAME: kafka-rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: kafka1:19092
+    depends_on:
+      - zk1
+      - kafka1
+      - kafka-schema-registry
+
+
+#---------------------------------------------------------------------------#
+# RADAR mongo connector                                                     #
+#---------------------------------------------------------------------------#
+  kafka-mongodb-connector:
+    image: radarbase/kafka-connect-mongodb-sink:0.2.1
+    restart: on-failure
+    volumes:
+      - ./kafka-connect/sink-mongo.properties:/etc/kafka-connect/sink.properties
+    depends_on:
+      - zk1
+      - kafka1
+      - kafka2
+      - kafka3
+      - kafka-schema-registry
+      - kafka-rest-proxy
+      #- kafka-init
+      - mongo
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092,PLAINTEXT://kafka2:29092,PLAINTEXT://kafka3:39092
+      CONNECT_REST_PORT: 8082
+      CONNECT_GROUP_ID: "default"
+      CONNECT_CONFIG_STORAGE_TOPIC: "default.config"
+      CONNECT_OFFSET_STORAGE_TOPIC: "default.offsets"
+      CONNECT_STATUS_STORAGE_TOPIC: "default.status"
+      CONNECT_KEY_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+      CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://kafka-schema-registry:8081"
+      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_OFFSET_STORAGE_FILE_FILENAME: "/tmp/connect2.offset"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "radar-mongodb-connector"
+      CONNECT_ZOOKEEPER_CONNECT: zk1:22181,zk2:32181,zk3:42181
+      CONNECT_CONSUMER_MAX_POLL_RECORDS: 500
+      CONNECT_CONSUMER_MAX_POLL_INTERVAL_MS: 300000
+      CONNECT_CONSUMER_SESSION_TIMEOUT_MS: 10000
+      CONNECT_CONSUMER_HEARTBEAT_INTERVAL_MS: 3000
+      CONNECT_PLUGIN_PATH: /usr/share/java/kafka-connect/plugins
+      KAFKA_BROKERS: 3
+      CONNECT_LOG4J_ROOT_LOGLEVEL: WARN
+      CONNECT_LOG4J_LOGGERS: "org.reflections=ERROR"
+
+
+#######################
+# Analytics und Spark #
+#######################
+  jupyter_spark:
+    image: jupyter/all-spark-notebook
+    user: root
+    #remove hostename due to problems of local spark instance
+    #hostname: jupyter_spark
+    ports:
+      - "8888:8888"
+      - "4040-4080:4040-4080"
+    environment:
+      NB_USER : 'jovyan'
+      GRANT_SUDO : 'yes'
+      PASSWORD : ''
+    volumes:
+      - ./notebooks:/home/jovyan/notebooks/
+
+#########
+# Druid #
+#########
+#  druid:
+#    image: druidio/example-cluster
+##    hostname: druid
+#    ports:
+#      - 3000:8082
+#      - 3001:8081
+
+############
+# Mongo DB #
+############
+  mongo:
+    image: mongo
+    hostname: mongo
+    ports:
+      - "27017:27017"
+
+##############
+# H2O Server #
+##############
+  h2o:
+    image: h2oai
+    hostname: h2o
+    ports:
+       - "54321:54321"
+    entrypoint: java -Xmx1g -jar /opt/h2o.jar
+
+#####################
+# Cassandra Cluster #
+#####################
+#  cassandra-seed:
+#    container_name: cassandra-seed-node
+#    image: cassandra:3.11.0
+#    ports:
+#      - "9042:9042"   # Native transport
+#      - "7199:7199"   # JMX
+#      - "9160:9160"   # Thrift clients
+#
+#  cassandra-node-1:
+#    image: cassandra:3.11.0
+#    command: /bin/bash -c "echo 'Waiting for seed node' && sleep 30 && /docker-entrypoint.sh cassandra -f"
+#    environment:
+#      - "CASSANDRA_SEEDS=cassandra-seed-node"
+#    depends_on:
+#      - "cassandra-seed"
+#
+# OOM wit 16GB of RAM
+#  # you cannot have multiple nodes join the cluster at the same time when
+#  # cassandra.consistent.rangemovement is true so we further delay it to give it time to stabilize
+#  cassandra-node-2:
+#    image: cassandra:3.11.0
+#    command: /bin/bash -c "echo 'Waiting for seed node' && sleep 80 && /docker-entrypoint.sh cassandra -f"
+#    environment:
+#      - "CASSANDRA_SEEDS=cassandra-seed-node"
+#    depends_on:
+#      - "cassandra-seed"
